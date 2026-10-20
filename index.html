@@ -102,7 +102,7 @@
 "use strict";
 // ============================================================
 // CHỈNH NỘI DUNG TRONG STEPS: mở đầu, các câu theo thứ tự, kết thúc.
-// Dùng \n để xuống dòng. duration tính bằng mili-giây.
+// Dùng \n để xuống dòng. duration là tổng thời gian tụ, giữ, tan và nghỉ (mili-giây).
 // ============================================================
 
 const STEPS = [
@@ -116,27 +116,27 @@ const STEPS = [
     hint: "Chạm để bắt đầu · Xem đẹp nhất khi cầm ngang điện thoại"
   },
 
-  { text: "Hôm nay 20.10", duration: 3500 },
+  { text: "Hôm nay 20.10", duration: 5900 },
 
-  { text: "Là một ngày\nđặc biệt", duration: 3500 },
+  { text: "Là một ngày\nđặc biệt", duration: 5900 },
 
-  { text: "Dành cho một\nngười đặc biệt", duration: 4200 },
+  { text: "Dành cho một\nngười đặc biệt", duration: 6600 },
 
-  { text: "Chúc người đẹp\nluôn mỉm cười", duration: 4000 },
+  { text: "Chúc người đẹp\nluôn mỉm cười", duration: 6400 },
 
-  { text: "Mọi muộn phiền\nrồi sẽ qua", duration: 3500 },
+  { text: "Mọi muộn phiền\nrồi sẽ qua", duration: 5900 },
 
-  { text: "Và những điều\ntốt đẹp sẽ đến", duration: 3900 },
+  { text: "Và những điều\ntốt đẹp sẽ đến", duration: 6300 },
 
-  { text: "Nếu một ngày\nthấy mệt mỏi", duration: 3500 },
+  { text: "Nếu một ngày\nthấy mệt mỏi", duration: 5900 },
 
-  { text: "Hãy nhớ rằng\nvẫn có BB", duration: 4100 },
+  { text: "Hãy nhớ rằng\nvẫn có BB", duration: 6500 },
 
-  { text: "Sẵn sàng lắng nghe\nvà sẻ chia", duration: 3700 },
+  { text: "Sẵn sàng lắng nghe\nvà sẻ chia", duration: 6100 },
 
-  { text: "Chẳng cần hứa\nnhững điều lớn lao", duration: 4400 },
+  { text: "Chẳng cần hứa\nnhững điều lớn lao", duration: 6800 },
 
-  { text: "Chỉ mong chúng ta\nluôn chân thành như thế ♡", duration: 4400 },
+  { text: "Chỉ mong chúng ta\nluôn chân thành như thế ♡", duration: 6800 },
 
   {
     type: "final",
@@ -154,7 +154,7 @@ const SETTINGS = {
   finalCaption: finalStep.caption,
   rainColor: [255, 54, 132], // RGB của mưa chữ
   maxTextParticles: 3600,
-  fireflies: { gatherMs: 1150, scatterMs: 900, radius: .85, glow: 7 },
+  fireflies: { gatherMs: 1700, scatterMs: 1500, pauseMs: 650, radius: .85, glow: 7 },
   heartParticles: 1250
 };
 // ============================================================
@@ -303,11 +303,10 @@ function setScene(index, t, preserve=false) {
     announce.textContent=message.replaceAll('\n',' ');
     caption.classList.remove('visible');
   }
-  const old = particles;
   particles = positions.map((target, i) => {
-    const src = !preserve && index > 0 ? old[i % old.length] : null;
-    const x = preserve ? target.x : (src ? src.x : rand(0, W));
-    const y = preserve ? target.y : (src ? src.y : rand(0, H));
+    // Each phrase starts from a fresh cloud after the previous one fully disappears.
+    const x = preserve ? target.x : rand(0, W);
+    const y = preserve ? target.y : rand(0, H);
     const angle = rand(0, Math.PI * 2);
     const distance = rand(Math.min(W, H) * .25, Math.min(W, H) * .85);
     return {
@@ -339,11 +338,14 @@ function drawScene(t) {
   const heart = sceneIndex >= SETTINGS.messages.length;
   const elapsed = Math.max(0,t-sceneStartedAt);
   const duration=heart ? Infinity : SETTINGS.messages[sceneIndex].duration;
-  const envelope = heart ? clamp(elapsed/1700,0,1) : 1;
-  const gatherMs = Math.min(SETTINGS.fireflies.gatherMs, duration * .34);
-  const scatterMs = Math.min(SETTINGS.fireflies.scatterMs, duration * .27);
+  const pauseMs = heart ? 0 : Math.min(SETTINGS.fireflies.pauseMs, duration * .12);
+  const visibleDuration = duration - pauseMs;
+  const gatherMs = Math.min(SETTINGS.fireflies.gatherMs, visibleDuration * .34);
+  const scatterMs = Math.min(SETTINGS.fireflies.scatterMs, visibleDuration * .30);
   const gather = heart ? smooth(elapsed / 1700) : clamp(elapsed / gatherMs, 0, 1);
-  const scatter = heart ? 0 : clamp((elapsed - duration + scatterMs) / scatterMs, 0, 1);
+  const scatter = heart ? 0 : clamp((elapsed - visibleDuration + scatterMs) / scatterMs, 0, 1);
+  const envelope = heart ? clamp(elapsed/1700,0,1) :
+    smooth(elapsed / 550) * (1 - smooth((scatter - .2) / .8));
 
   if (heart) {
     // Thin, luminous outline underneath the individual particles.
@@ -364,7 +366,7 @@ function drawScene(t) {
 
   fx.save();
   fx.globalCompositeOperation = 'lighter';
-  for (const p of particles) {
+  if (envelope > 0) for (const p of particles) {
     const arrival = smooth((gather - p.delay) / (1 - p.delay));
     const departure = smooth((scatter - p.delay * .6) / (1 - p.delay * .6));
     const flutter = Math.sin(arrival * Math.PI) * p.bend;
@@ -378,11 +380,11 @@ function drawScene(t) {
     // Independent slow pulses and brief bright flashes, with a crisp pin-point core.
     const pulse = (.5 + .5 * Math.sin(t * p.speed + p.phase)) ** 3;
     const flash = (.5 + .5 * Math.sin(t * p.speed * 2.3 + p.phase)) ** 18;
-    const brightness = (.28 + .55 * pulse + .35 * flash) * envelope;
+    const brightness = .28 + .55 * pulse + .35 * flash;
     const halo = SETTINGS.fireflies.glow * p.size * (1 + flash * .65);
-    fx.globalAlpha = brightness * .72;
+    fx.globalAlpha = Math.min(1, brightness * .72) * envelope;
     fx.drawImage(fireflySprite, p.x - halo, p.y - halo, halo * 2, halo * 2);
-    fx.globalAlpha = Math.min(1, brightness + .25);
+    fx.globalAlpha = Math.min(1, brightness + .25) * envelope;
     fx.fillStyle = '#fff1fa';
     fx.beginPath();
     fx.arc(p.x, p.y, p.size * (.8 + flash * .35), 0, Math.PI * 2);
