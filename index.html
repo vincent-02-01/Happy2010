@@ -11,6 +11,17 @@
     * { box-sizing: border-box; }
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
     body { color: white; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; }
+    [hidden] { display: none !important; }
+    .code-gate { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+      padding: 24px; overflow-y: auto; background: radial-gradient(ellipse at center, #300d29, #08030c 75%); }
+    .code-box { width: min(440px, 100%); padding: 32px 24px; text-align: center;
+      border: 1px solid #ffb4d440; border-radius: 24px; background: #180b1bdd; box-shadow: 0 12px 70px #ff5aa31a; }
+    .code-box h2 { color: #fff3fa; font-size: clamp(22px, 5vw, 28px); line-height: 1.45; margin: 0 0 24px; }
+    .code-box label { display: block; margin-bottom: 10px; color: #f5d3e4; font-size: 14px; }
+    .code-input { width: 100%; padding: 14px; border: 1px solid #ffb4d470; border-radius: 12px;
+      background: #08030c; color: #fff3fa; font: 24px system-ui; text-align: center; letter-spacing: .2em; }
+    .code-input:focus-visible { outline: 2px solid #ffb4d4; outline-offset: 3px; }
+    .code-error { min-height: 2.8em; margin: 14px 0; font-size: 14px; line-height: 1.4; color: #ffc2dd; }
     #experience { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; }
     @media (pointer: coarse) and (orientation: portrait) {
       #experience { inset: auto; left: 50%; top: 50%; width: 100dvh; height: 100dvw;
@@ -27,7 +38,7 @@
     .top-label { position: fixed; z-index: 4; left: 50%; top: calc(16px + env(safe-area-inset-top));
       transform: translateX(-50%); white-space: nowrap; color: #ffd4e8; letter-spacing: .22em;
       text-transform: uppercase; font-size: 10px; font-weight: 600; pointer-events: none; }
-    .intro { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 28px;
+    .intro { position: fixed; z-index: 10; inset: 0; display: grid; place-items: safe center; padding: 28px; overflow-y: auto;
       background: radial-gradient(ellipse at center, rgba(38,8,35,.82), rgba(7,1,10,.88));
       transition: opacity .85s, visibility .85s; }
     .intro.hide { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -54,8 +65,11 @@
     .control:active { background: #70294988; }
     .final-caption { position: fixed; z-index: 4; bottom: calc(28px + env(safe-area-inset-bottom)); left: 50%;
       transform: translate(-50%, 12px); text-align: center; width: 90%; pointer-events: none;
-      font-size: 12px; letter-spacing: .2em; color: #ffc2dd; opacity: 0; transition: 1.6s; }
-    .final-caption.visible { opacity: .95; transform: translate(-50%, 0); }
+      font-size: clamp(11px, 1.7vh, 14px); letter-spacing: .025em; line-height: 1.6;
+      white-space: pre-line; color: #ffe0ef; opacity: 0; transition: 1.6s;
+      width: min(90%, 800px); bottom: calc(62px + env(safe-area-inset-bottom));
+      max-height: 30%; overflow-y: auto; }
+    .final-caption.visible { pointer-events: auto; opacity: .95; transform: translate(-50%, 0); }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
       overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     @keyframes heartbeat { 0%,100% {transform: scale(1)} 12% {transform: scale(1.12)} 28% {transform: scale(1)} 43% {transform: scale(1.07)} }
@@ -72,7 +86,18 @@
   </style>
 </head>
 <body>
-  <main id="experience">
+  <section class="code-gate" id="codeGate" role="dialog" aria-modal="true" aria-labelledby="codeTitle">
+    <form class="code-box" id="codeForm">
+      <div class="mini-heart" aria-hidden="true">♥</div>
+      <h2 id="codeTitle">Nhập đúng mã số của người đặc biệt để mở!</h2>
+      <label for="accessCode">Mã số của người đặc biệt</label>
+      <input class="code-input" id="accessCode" type="password" inputmode="numeric" pattern="[0-9]{8}"
+        maxlength="8" autocomplete="off" aria-describedby="codeError" required />
+      <p class="code-error" id="codeError" role="status" aria-live="polite"></p>
+      <button class="begin" type="submit">Xác nhận ♡</button>
+    </form>
+  </section>
+  <main id="experience" hidden>
   <canvas id="rain" aria-hidden="true"></canvas>
   <div class="shade"></div>
   <canvas id="particles" aria-hidden="true"></canvas>
@@ -95,11 +120,39 @@
     <button class="control" id="replayBtn" title="Xem lại từ đầu">↻ Xem lại</button>
   </div>
   <div class="sr-only" id="announce" aria-live="polite"></div>
-  <audio id="music" src="Until You.mp3" autoplay loop preload="auto" playsinline></audio>
+  <audio id="music" data-src="Until You.mp3" loop preload="none" playsinline></audio>
   </main>
 
 <script>
 "use strict";
+const ACCESS_CODE = '29031983';
+const codeForm = document.getElementById('codeForm');
+const codeInput = document.getElementById('accessCode');
+const codeError = document.getElementById('codeError');
+let unlocked = false;
+codeForm.addEventListener('submit', event => {
+  event.preventDefault();
+  if (unlocked) return;
+  if (codeInput.value !== ACCESS_CODE) {
+    codeError.textContent = 'Mã chưa đúng rồi, người đặc biệt thử lại nhé ♡';
+    codeInput.setAttribute('aria-invalid', 'true');
+    codeInput.focus();
+    codeInput.select();
+    return;
+  }
+  unlocked = true;
+  codeInput.value = '';
+  document.getElementById('codeGate').hidden = true;
+  document.getElementById('experience').hidden = false;
+  initGift();
+  document.getElementById('startBtn').focus();
+});
+codeInput.addEventListener('input', () => {
+  codeError.textContent = '';
+  codeInput.removeAttribute('aria-invalid');
+});
+
+function initGift() {
 // ============================================================
 // CHỈNH NỘI DUNG TRONG STEPS: mở đầu, các câu theo thứ tự, kết thúc.
 // Dùng \n để xuống dòng. duration là tổng thời gian tụ, giữ, tan và nghỉ (mili-giây).
@@ -108,41 +161,184 @@
 const STEPS = [
   {
     type: "intro",
-    label: "20.10 ♥ dành riêng cho người đẹp",
-    eyebrow: "20 tháng 10",
-    title: "Gửi đến người đẹp\nmột điều đặc biệt",
-    description: "Có những điều chẳng cần nói quá nhiều, chỉ mong người đẹp cảm nhận được sự chân thành từ BB...",
-    button: "Mở món quà ♡",
-    hint: "Chạm để bắt đầu · Xem đẹp nhất khi cầm ngang điện thoại"
+    label: "20.10 ♥ Dành riêng cho người đẹp",
+    eyebrow: "20 tháng 10 · 2026",
+    title: "Gửi đến người đẹp\nmột chút dịu dàng",
+    description:
+      "Có những người xuất hiện trong cuộc đời không quá ồn ào, " +
+      "nhưng lại mang đến một cảm giác rất đỗi đặc biệt. " +
+      "Nhân ngày 20/10, BB muốn gửi đến người đẹp " +
+      "những lời chúc và đôi điều chân thành từ tận lòng mình...",
+    button: "Mở lời nhắn của BB ♡",
+    hint: "Chạm để bắt đầu · Hãy đọc thật chậm nhé"
   },
 
-  { text: "Hôm nay 20.10", duration: 5900 },
+  {
+    text: "Hôm nay là 20/10...\nMột ngày thật đẹp để BB gửi đến người đẹp\nnhững lời chúc chân thành nhất.",
+    duration: 10000
+  },
 
-  { text: "Là một ngày\nđặc biệt", duration: 5900 },
+  {
+    text: "Chúc người đẹp của BB\nkhông chỉ hôm nay, mà cả những ngày sau nữa\nđều có thật nhiều lý do để mỉm cười.",
+    duration: 11000
+  },
 
-  { text: "Dành cho một\nngười đặc biệt", duration: 6600 },
+  {
+    text: "BB mong mỗi buổi sáng thức dậy,\nngười đẹp đều cảm thấy lòng mình nhẹ nhàng,\nvà luôn có điều gì đó đáng yêu để mong chờ.",
+    duration: 11500
+  },
 
-  { text: "Chúc người đẹp\nluôn mỉm cười", duration: 6400 },
+  {
+    text: "BB biết rằng...\nKhông phải ngày nào cuộc sống\ncũng nhẹ nhàng và dễ chịu như mình mong muốn.",
+    duration: 9500
+  },
 
-  { text: "Mọi muộn phiền\nrồi sẽ qua", duration: 5900 },
+  {
+    text: "Sẽ có những ngày người đẹp mệt mỏi,\ncó những chuyện chẳng biết kể cùng ai,\nvà có những nỗi buồn chỉ muốn giữ cho riêng mình.",
+    duration: 11500
+  },
 
-  { text: "Và những điều\ntốt đẹp sẽ đến", duration: 6300 },
+  {
+    text: "Nhưng người đẹp à...\nĐừng lúc nào cũng cố tỏ ra mạnh mẽ.\nĐôi khi yếu lòng một chút cũng chẳng sao đâu.",
+    duration: 10500
+  },
 
-  { text: "Nếu một ngày\nthấy mệt mỏi", duration: 5900 },
+  {
+    text: "Nếu một ngày mọi thứ trở nên quá sức,\nhãy cho bản thân được nghỉ ngơi một chút.\nKhông cần phải vội vàng ổn lại ngay đâu.",
+    duration: 11500
+  },
 
-  { text: "Hãy nhớ rằng\nvẫn có BB", duration: 6500 },
+  {
+    text: "BB mong người đẹp sẽ luôn nhớ rằng...\nKhông cần phải trở thành một ai khác,\ncũng chẳng cần phải hoàn hảo trong mắt mọi người.",
+    duration: 11500
+  },
 
-  { text: "Sẵn sàng lắng nghe\nvà sẻ chia", duration: 6100 },
+  {
+    text: "Cứ là chính mình thôi nhé.\nVới những niềm vui, nỗi buồn,\ncả những điều nhỏ bé và chưa trọn vẹn.",
+    duration: 10000
+  },
 
-  { text: "Chẳng cần hứa\nnhững điều lớn lao", duration: 6800 },
+  {
+    text: "Bởi người đẹp luôn xứng đáng\nđược trân trọng, được quan tâm,\nvà được yêu thương bằng tất cả sự chân thành.",
+    duration: 10500
+  },
 
-  { text: "Chỉ mong chúng ta\nluôn chân thành như thế ♡", duration: 6800 },
+  {
+    text: "Có một điều BB muốn cảm ơn...\nCảm ơn vì giữa rất nhiều người ngoài kia,\nchúng ta lại có cơ hội biết đến nhau.",
+    duration: 11000
+  },
+
+  {
+    text: "Cảm ơn vì những câu chuyện đã sẻ chia,\nnhững lần lắng nghe nhau, những tiếng cười,\nvà cả những điều giản dị mà chúng ta cùng trải qua.",
+    duration: 12000
+  },
+
+  {
+    text: "BB luôn nghĩ rằng...\nĐiều khiến một mối quan hệ trở nên đặc biệt\nchính là cảm giác được thấu hiểu và tin tưởng.",
+    duration: 11000
+  },
+
+  {
+    text: "Là khi ta có thể thoải mái kể cho nhau\nnhững chuyện vui, chuyện buồn,\nhay đôi khi chỉ là vài điều rất đỗi bình thường.",
+    duration: 11500
+  },
+
+  {
+    text: "Là khi chẳng cần phải lựa chọn lời nói quá kỹ,\nchẳng cần che giấu những cảm xúc thật,\nmà vẫn cảm thấy mình được lắng nghe.",
+    duration: 11500
+  },
+
+  {
+    text: "BB không dám nói rằng\nmình có thể hiểu hết mọi điều người đẹp trải qua.\nVì mỗi người đều có những tâm sự rất riêng.",
+    duration: 11500
+  },
+
+  {
+    text: "Nhưng BB luôn muốn là một người\nmà người đẹp có thể tin tưởng,\ncó thể tìm đến khi muốn kể đôi điều trong lòng.",
+    duration: 11000
+  },
+
+  {
+    text: "Không nhất thiết phải là chuyện vui.\nCũng chẳng cần phải sắp xếp mọi cảm xúc cho thật ổn.\nCứ kể thôi, BB nghe mà. ♡",
+    duration: 11500
+  },
+
+  {
+    text: "Và nếu có những lúc người đẹp chỉ muốn yên tĩnh,\nBB cũng mong người đẹp có được\nmột khoảng trời riêng thật bình yên và dễ chịu.",
+    duration: 12000
+  },
+
+  {
+    text: "BB mong chúng ta sẽ luôn giữ được\nsự chân thành và thoải mái như thế.\nCùng lắng nghe, cùng sẻ chia và cùng thấu hiểu.",
+    duration: 11500
+  },
+
+  {
+    text: "Mong rằng chúng ta sẽ còn\nthật nhiều câu chuyện để kể,\nthật nhiều niềm vui và những kỷ niệm đẹp để cùng tạo nên.",
+    duration: 11000
+  },
+
+  {
+    text: "Mong những ngày bình thường nhất\ncũng trở nên đáng nhớ hơn một chút,\nchỉ nhờ vài lời hỏi han và những tiếng cười giản dị.",
+    duration: 11500
+  },
+
+  {
+    text: "BB cũng mong người đẹp\nsẽ luôn gặp được những điều tử tế,\nnhững con người chân thành và những cơ hội thật đẹp.",
+    duration: 11000
+  },
+
+  {
+    text: "Mong những cố gắng âm thầm\nsẽ được đền đáp bằng những điều xứng đáng.\nMong những dự định trong lòng sẽ dần trở thành hiện thực.",
+    duration: 11500
+  },
+
+  {
+    text: "Và trên tất cả...\nBB mong người đẹp luôn tìm thấy bình yên\nngay trong những điều giản dị nhất của cuộc sống.",
+    duration: 10500
+  },
+
+  {
+    text: "Đừng quên chăm sóc bản thân thật tốt nhé.\nĂn uống đầy đủ, ngủ ngon hơn một chút,\nvà dành cho chính mình thật nhiều sự dịu dàng.",
+    duration: 12000
+  },
+
+  {
+    text: "Nếu hôm nay có điều gì khiến người đẹp vui,\nBB rất muốn được nghe kể.\nCòn nếu có chuyện khiến người đẹp buồn, BB cũng vậy.",
+    duration: 11500
+  },
+
+  {
+    text: "Bởi đôi khi, sự đồng hành đẹp nhất\nkhông nằm ở những điều lớn lao,\nmà ở việc luôn dành cho nhau sự quan tâm chân thành.",
+    duration: 11500
+  },
+
+  {
+    text: "BB trân trọng những gì chúng ta đang có,\ntrân trọng sự tin tưởng, những câu chuyện,\nvà cả những khoảnh khắc giản dị giữa hai người.",
+    duration: 11500
+  },
+
+  {
+    text: "Hy vọng chúng ta sẽ luôn như thế nhé.\nVẫn chân thành, vẫn thoải mái,\nvẫn có thể sẻ chia với nhau thật nhiều điều trong cuộc sống.",
+    duration: 12000
+  },
+
+  {
+    text: "Cảm ơn người đẹp vì đã xuất hiện.\nCảm ơn vì đã cho BB cơ hội được lắng nghe,\nđược sẻ chia và trở thành một người đặc biệt. ♡",
+    duration: 12500
+  },
 
   {
     type: "final",
-    text: "Bình yên và thật hạnh phúc nhé\n người đẹp của tui nè♡",
-    caption: "20.10.2026 · Cảm ơn vì đã là một người đặc biệt",
-    replay: "↻ Xem lại"
+    text: "20/10 thật dịu dàng nhé,\nngười đẹp của BB ♡",
+    caption:
+      "20.10.2026 · Mong người đẹp luôn bình an, " +
+      "hạnh phúc và được yêu thương thật lòng.\n" +
+      "Mong chúng ta sẽ luôn có thật nhiều điều để kể, " +
+      "thật nhiều niềm vui để sẻ chia, " +
+      "và thật nhiều khoảnh khắc đẹp để cùng trân trọng.\n" +
+      "Cảm ơn vì một đã là một người thật đặc biệt. — BB",
+    replay: "↻ Đọc lại lời nhắn"
   }
 ];
 
@@ -154,7 +350,7 @@ const SETTINGS = {
   finalCaption: finalStep.caption,
   rainColor: [255, 54, 132], // RGB của mưa chữ
   maxTextParticles: 3600,
-  fireflies: { gatherMs: 1700, scatterMs: 1500, pauseMs: 650, radius: .85, glow: 7 },
+  fireflies: { gatherMs: 1900, scatterMs: 1700, pauseMs: 850, radius: .85, glow: 7 },
   heartParticles: 1250
 };
 // ============================================================
@@ -167,6 +363,7 @@ const controls = document.getElementById('controls');
 const caption = document.getElementById('caption');
 const announce = document.getElementById('announce');
 const music = document.getElementById('music');
+music.src = music.dataset.src;
 const startBtn = document.getElementById('startBtn');
 const replayBtn = document.getElementById('replayBtn');
 const experience = document.getElementById('experience');
@@ -471,6 +668,7 @@ enablePresentation();
 
 resize();
 requestAnimationFrame(loop);
+}
 </script>
 </body>
 </html>
