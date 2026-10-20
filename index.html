@@ -8,14 +8,23 @@
   <title>20.10 | Gửi đến người đẹp của tui ♥</title>
   <style>
     :root { --pink: #ff5caa; --pink-light: #ffe4f2; --bg: #08030c; }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    img { -webkit-user-drag: none; }
+    ::selection { background: transparent; }
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
     body { color: white; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; }
     [hidden] { display: none !important; }
-    .code-gate { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+    .code-gate { position: fixed; inset: 0; z-index: 20; display: grid; place-items: safe center;
       padding: 24px; overflow-y: auto; background: radial-gradient(ellipse at center, #300d29, #08030c 75%); }
     .code-box { width: min(440px, 100%); padding: 32px 24px; text-align: center;
       border: 1px solid #ffb4d440; border-radius: 24px; background: #180b1bdd; box-shadow: 0 12px 70px #ff5aa31a; }
+    .code-emoji { display: block; width: clamp(120px, 23svh, 200px); height: clamp(120px, 23svh, 200px);
+      object-fit: contain; margin: 0 auto 16px; filter: drop-shadow(0 4px 14px #ff5aa324); pointer-events: none; }
+    @media (max-height: 550px) {
+      .code-gate { padding: 14px; }
+      .code-box { padding: 18px 22px; }
+      .code-emoji { width: 100px; height: 100px; margin-bottom: 10px; }
+    }
     .code-box h2 { color: #fff3fa; font-size: clamp(22px, 5vw, 28px); line-height: 1.45; margin: 0 0 24px; }
     .code-box label { display: block; margin-bottom: 10px; color: #f5d3e4; font-size: 14px; }
     .code-input { width: 100%; padding: 14px; border: 1px solid #ffb4d470; border-radius: 12px;
@@ -88,7 +97,7 @@
 <body>
   <section class="code-gate" id="codeGate" role="dialog" aria-modal="true" aria-labelledby="codeTitle">
     <form class="code-box" id="codeForm">
-      <div class="mini-heart" aria-hidden="true">♥</div>
+      <img class="code-emoji" id="codeEmoji" src="Emoji/Ảnh ChatGPT 14_58_51 20 thg 10, 2026-1.png" width="200" height="200" alt="" aria-hidden="true" draggable="false" />
       <h2 id="codeTitle">Nhập đúng mã số của người đặc biệt để mở!</h2>
       <label for="accessCode">Mã số của người đặc biệt</label>
       <input class="code-input" id="accessCode" type="password" inputmode="numeric" pattern="[0-9]{8}"
@@ -125,7 +134,20 @@
 
 <script>
 "use strict";
+// Chặn bôi chọn trên giao diện, vẫn giữ thao tác gõ và xóa trong ô mã.
+document.addEventListener('selectstart', event => event.preventDefault());
+document.addEventListener('keydown', event => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') event.preventDefault();
+});
 const ACCESS_CODE = '29031983';
+const GATE_EMOJIS = [
+  "Emoji/Ảnh ChatGPT 14_58_51 20 thg 10, 2026-1.png",
+  "Emoji/Ảnh ChatGPT 14_58_53 20 thg 10, 2026-2.png",
+  "Emoji/Ảnh ChatGPT 14_58_54 20 thg 10, 2026-3.png",
+  "Emoji/Ảnh ChatGPT 14_58_55 20 thg 10, 2026-4.png"
+];
+const codeEmoji = document.getElementById('codeEmoji');
+let gateAttempt = 0;
 const codeForm = document.getElementById('codeForm');
 const codeInput = document.getElementById('accessCode');
 const codeError = document.getElementById('codeError');
@@ -134,10 +156,12 @@ codeForm.addEventListener('submit', event => {
   event.preventDefault();
   if (unlocked) return;
   if (codeInput.value !== ACCESS_CODE) {
+    gateAttempt = Math.min(gateAttempt + 1, GATE_EMOJIS.length - 1);
+    codeEmoji.src = GATE_EMOJIS[gateAttempt];
     codeError.textContent = 'Mã chưa đúng rồi, người đặc biệt thử lại nhé ♡';
     codeInput.setAttribute('aria-invalid', 'true');
     codeInput.focus();
-    codeInput.select();
+    codeInput.value = '';
     return;
   }
   unlocked = true;
