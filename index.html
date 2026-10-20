@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, interactive-widget=overlays-content" />
   <meta name="theme-color" content="#08030c" />
   <meta name="description" content="Món quà đặc biệt cho người đặc biệt" />
   <title>20.10 | Gửi đến người đẹp của tui ♥</title>
@@ -11,16 +11,21 @@
     * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     img { -webkit-user-drag: none; }
     ::selection { background: transparent; }
-    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: var(--bg); }
     body { color: white; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { position: fixed; inset: 0; }
+    #viewportShell { position: fixed; left: 0; top: 0; width: var(--view-width, 100%); height: var(--view-height, 100%);
+      overflow: hidden; contain: size; container-type: size;
+      transform: translate3d(0, var(--keyboard-offset, 0px), 0); }
+    .code-box, .intro-box { transform-origin: center; }
     [hidden] { display: none !important; }
-    .code-gate { position: fixed; inset: 0; z-index: 20; display: grid; place-items: safe center;
-      padding: 24px; overflow-y: auto; background: radial-gradient(ellipse at center, #300d29, #08030c 75%); }
+    .code-gate { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+      padding: 24px; overflow: hidden; background: radial-gradient(ellipse at center, #300d29, #08030c 75%); }
     .code-box { width: min(440px, 100%); padding: 32px 24px; text-align: center;
       border: 1px solid #ffb4d440; border-radius: 24px; background: #180b1bdd; box-shadow: 0 12px 70px #ff5aa31a; }
-    .code-emoji { display: block; width: clamp(120px, 23svh, 200px); height: clamp(120px, 23svh, 200px);
+    .code-emoji { display: block; width: clamp(120px, 23cqh, 200px); height: clamp(120px, 23cqh, 200px);
       object-fit: contain; margin: 0 auto 16px; filter: drop-shadow(0 4px 14px #ff5aa324); pointer-events: none; }
-    @media (max-height: 550px) {
+    @container (max-height: 550px) {
       .code-gate { padding: 14px; }
       .code-box { padding: 18px 22px; }
       .code-emoji { width: 100px; height: 100px; margin-bottom: 10px; }
@@ -32,10 +37,8 @@
     .code-input:focus-visible { outline: 2px solid #ffb4d4; outline-offset: 3px; }
     .code-error { min-height: 2.8em; margin: 14px 0; font-size: 14px; line-height: 1.4; color: #ffc2dd; }
     #experience { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; }
-    @media (pointer: coarse) and (orientation: portrait) {
-      #experience { inset: auto; left: 50%; top: 50%; width: 100dvh; height: 100dvw;
+    .phone-portrait #experience { inset: auto; left: 50%; top: 50%; width: var(--view-height); height: var(--view-width);
         transform: translate(-50%, -50%) rotate(90deg); }
-    }
     #rain, #particles { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
     #rain { z-index: 0; }
     #particles { z-index: 2; pointer-events: none; }
@@ -47,7 +50,7 @@
     .top-label { position: fixed; z-index: 4; left: 50%; top: calc(16px + env(safe-area-inset-top));
       transform: translateX(-50%); white-space: nowrap; color: #ffd4e8; letter-spacing: .22em;
       text-transform: uppercase; font-size: 10px; font-weight: 600; pointer-events: none; }
-    .intro { position: fixed; z-index: 10; inset: 0; display: grid; place-items: safe center; padding: 28px; overflow-y: auto;
+    .intro { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 28px; overflow: hidden;
       background: radial-gradient(ellipse at center, rgba(38,8,35,.82), rgba(7,1,10,.88));
       transition: opacity .85s, visibility .85s; }
     .intro.hide { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -74,19 +77,19 @@
     .control:active { background: #70294988; }
     .final-caption { position: fixed; z-index: 4; bottom: calc(28px + env(safe-area-inset-bottom)); left: 50%;
       transform: translate(-50%, 12px); text-align: center; width: 90%; pointer-events: none;
-      font-size: clamp(11px, 1.7vh, 14px); letter-spacing: .025em; line-height: 1.6;
+      font-size: clamp(11px, 1.7cqh, 14px); letter-spacing: .025em; line-height: 1.6;
       white-space: pre-line; color: #ffe0ef; opacity: 0; transition: 1.6s;
       width: min(90%, 800px); bottom: calc(62px + env(safe-area-inset-bottom));
-      max-height: 30%; overflow-y: auto; }
+      max-height: 30%; overflow: hidden; }
     .final-caption.visible { pointer-events: auto; opacity: .95; transform: translate(-50%, 0); }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
       overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     @keyframes heartbeat { 0%,100% {transform: scale(1)} 12% {transform: scale(1.12)} 28% {transform: scale(1)} 43% {transform: scale(1.07)} }
-    @media (orientation: landscape) and (max-height: 500px) {
+    @container (min-aspect-ratio: 1/1) and (max-height: 500px) {
       .intro-box { width: min(640px,100%); }
       .mini-heart { height: 42px; margin-bottom: 6px; font-size: 32px; }
       .eyebrow { margin-bottom: 8px; }
-      h1 { font-size: clamp(30px, 6vh, 44px); }
+      h1 { font-size: clamp(30px, 6cqh, 44px); }
       .intro-desc { margin: 8px auto 15px; }
       .rotate-hint { display: none; }
       .top-label { top: 9px; }
@@ -95,6 +98,7 @@
   </style>
 </head>
 <body>
+  <div id="viewportShell">
   <section class="code-gate" id="codeGate" role="dialog" aria-modal="true" aria-labelledby="codeTitle">
     <form class="code-box" id="codeForm">
       <img class="code-emoji" id="codeEmoji" src="Emoji/Ảnh ChatGPT 14_58_51 20 thg 10, 2026-1.png" width="200" height="200" alt="" aria-hidden="true" draggable="false" />
@@ -131,9 +135,46 @@
   <div class="sr-only" id="announce" aria-live="polite"></div>
   <audio id="music" data-src="Until You.mp3" loop preload="none" playsinline></audio>
   </main>
+  </div>
 
 <script>
 "use strict";
+// Keep the layout viewport stable while the software keyboard covers the page.
+const viewportShell = document.getElementById('viewportShell');
+let keyboardFocused = false;
+function fitFixedPanels() {
+  for (const selector of ['.code-box', '.intro-box']) {
+    const panel = document.querySelector(selector);
+    if (!panel || !panel.offsetHeight) continue;
+    const host = panel.parentElement;
+    const padding = parseFloat(getComputedStyle(host).paddingTop) + parseFloat(getComputedStyle(host).paddingBottom);
+    const scale = Math.min(1, (host.clientHeight - padding) / panel.offsetHeight);
+    panel.style.transform = `scale(${Math.max(.1, scale)})`;
+  }
+}
+function syncFixedViewport() {
+  if (keyboardFocused) return;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  viewportShell.style.setProperty('--view-width', width + 'px');
+  viewportShell.style.setProperty('--view-height', height + 'px');
+  viewportShell.classList.toggle('phone-portrait',
+    window.matchMedia('(pointer: coarse)').matches && width < height);
+  fitFixedPanels();
+}
+function pinKeyboardViewport() {
+  const offset = keyboardFocused ? (window.visualViewport?.offsetTop || 0) : 0;
+  viewportShell.style.setProperty('--keyboard-offset', offset + 'px');
+  if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+}
+window.addEventListener('resize', syncFixedViewport, {passive:true});
+window.addEventListener('scroll', pinKeyboardViewport, {passive:true});
+window.visualViewport?.addEventListener('scroll', pinKeyboardViewport, {passive:true});
+window.visualViewport?.addEventListener('resize', pinKeyboardViewport, {passive:true});
+document.addEventListener('touchmove', event => event.preventDefault(), {passive:false});
+new ResizeObserver(fitFixedPanels).observe(viewportShell);
+document.fonts?.ready.then(fitFixedPanels);
+syncFixedViewport();
 // Chặn bôi chọn trên giao diện, vẫn giữ thao tác gõ và xóa trong ô mã.
 document.addEventListener('selectstart', event => event.preventDefault());
 document.addEventListener('keydown', event => {
@@ -150,6 +191,15 @@ const codeEmoji = document.getElementById('codeEmoji');
 let gateAttempt = 0;
 const codeForm = document.getElementById('codeForm');
 const codeInput = document.getElementById('accessCode');
+codeInput.addEventListener('focus', () => {
+  keyboardFocused = true;
+  pinKeyboardViewport();
+});
+codeInput.addEventListener('blur', () => {
+  keyboardFocused = false;
+  pinKeyboardViewport();
+  // The closing keyboard animates; wait for a subsequent viewport resize to re-fit.
+});
 const codeError = document.getElementById('codeError');
 let unlocked = false;
 codeForm.addEventListener('submit', event => {
@@ -168,6 +218,8 @@ codeForm.addEventListener('submit', event => {
   codeInput.value = '';
   document.getElementById('codeGate').hidden = true;
   document.getElementById('experience').hidden = false;
+  codeInput.blur();
+  fitFixedPanels();
   initGift();
   document.getElementById('startBtn').focus();
 });
