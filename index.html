@@ -5,12 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#08030c" />
   <meta name="description" content="Món quà đặc biệt nhân ngày Phụ nữ Việt Nam 20/10" />
-  <title>20.10 | Gửi đến em ♥</title>
+  <title>20.10 | Gửi đến người đẹp của tui ♥</title>
   <style>
     :root { --pink: #ff5caa; --pink-light: #ffe4f2; --bg: #08030c; }
     * { box-sizing: border-box; }
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
     body { color: white; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; }
+    #experience { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+    @media (pointer: coarse) and (orientation: portrait) {
+      #experience { inset: auto; left: 50%; top: 50%; width: 100dvh; height: 100dvw;
+        transform: translate(-50%, -50%) rotate(90deg); }
+    }
     #rain, #particles { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
     #rain { z-index: 0; }
     #particles { z-index: 2; pointer-events: none; }
@@ -20,7 +25,7 @@
     .grain { position: fixed; z-index: 3; inset: 0; pointer-events: none; opacity: .06;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.36'/%3E%3C/svg%3E"); }
     .top-label { position: fixed; z-index: 4; left: 50%; top: calc(16px + env(safe-area-inset-top));
-      transform: translateX(-50%); white-space: nowrap; color: #ffb6d8aa; letter-spacing: .22em;
+      transform: translateX(-50%); white-space: nowrap; color: #ffd4e8; letter-spacing: .22em;
       text-transform: uppercase; font-size: 10px; font-weight: 600; pointer-events: none; }
     .intro { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 28px;
       background: radial-gradient(ellipse at center, rgba(38,8,35,.82), rgba(7,1,10,.88));
@@ -39,7 +44,7 @@
       padding: 15px 30px; border-radius: 999px; box-shadow: 0 6px 38px #ff2b8255;
       transition: transform .2s, box-shadow .2s; }
     .begin:active { transform: scale(.96); }
-    .rotate-hint { color: #d29db6; font-size: 12px; margin-top: 23px; }
+    .rotate-hint { color: #f5d3e4; font-size: 12px; margin-top: 23px; }
     .controls { position: fixed; z-index: 5; bottom: calc(12px + env(safe-area-inset-bottom));
       right: calc(16px + env(safe-area-inset-right)); display: flex; gap: 9px; opacity: 0;
       transform: translateY(10px); transition: .5s; pointer-events: none; }
@@ -48,7 +53,7 @@
       color: #f9c6de; min-height: 38px; padding: 7px 14px; font-size: 12px; backdrop-filter: blur(5px); }
     .control:active { background: #70294988; }
     .final-caption { position: fixed; z-index: 4; bottom: calc(28px + env(safe-area-inset-bottom)); left: 50%;
-      transform: translate(-50%, 12px); text-align: center; width: 90vw; pointer-events: none;
+      transform: translate(-50%, 12px); text-align: center; width: 90%; pointer-events: none;
       font-size: 12px; letter-spacing: .2em; color: #ffc2dd; opacity: 0; transition: 1.6s; }
     .final-caption.visible { opacity: .95; transform: translate(-50%, 0); }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -67,6 +72,7 @@
   </style>
 </head>
 <body>
+  <main id="experience">
   <canvas id="rain" aria-hidden="true"></canvas>
   <div class="shade"></div>
   <canvas id="particles" aria-hidden="true"></canvas>
@@ -80,40 +86,72 @@
       <h1>Gửi đến người đẹp<br/>một điều đặc biệt</h1>
       <p class="intro-desc">Có những lời muốn nói, nhưng bb muốn để những vì sao màu hồng kể lại...</p>
       <button class="begin" id="startBtn">Mở món quà ♡</button>
-      <p class="rotate-hint">Xoay ngang điện thoại để xem hiệu ứng đẹp hơn.</p>
+      <p class="rotate-hint"></p>
     </div>
   </section>
 
   <div class="final-caption" id="caption">20.10.2026 · Luôn mỉm cười nhé ♡</div>
   <div class="controls" id="controls">
-    <button class="control" id="soundBtn" title="Bật hoặc tắt nhạc">♫ Tắt nhạc</button>
     <button class="control" id="replayBtn" title="Xem lại từ đầu">↻ Xem lại</button>
   </div>
   <div class="sr-only" id="announce" aria-live="polite"></div>
-  <audio id="music" src="nhac-nen.mp3" loop preload="auto"></audio>
+  <audio id="music" src="Until You.mp3" autoplay loop preload="auto" playsinline></audio>
+  </main>
 
 <script>
 "use strict";
 // ============================================================
-// CHỈNH NỘI DUNG Ở ĐÂY: mỗi dòng sẽ xuất hiện một lần.
+// CHỈNH NỘI DUNG TRONG STEPS: mở đầu, các câu theo thứ tự, kết thúc.
 // Dùng \n để xuống dòng. duration tính bằng mili-giây.
 // ============================================================
+
+const STEPS = [
+  {
+    type: "intro",
+    label: "20.10 ♥ dành riêng cho người đẹp",
+    eyebrow: "20 tháng 10",
+    title: "Gửi đến người đẹp\nmột điều đặc biệt",
+    description: "Có những điều chẳng cần nói quá nhiều, chỉ mong người đẹp cảm nhận được sự chân thành từ BB...",
+    button: "Mở món quà ♡",
+    hint: "Chạm để bắt đầu · Xem đẹp nhất khi cầm ngang điện thoại"
+  },
+
+  { text: "Hôm nay 20.10", duration: 3500 },
+
+  { text: "Là một ngày\nđặc biệt", duration: 3500 },
+
+  { text: "Dành cho một\nngười đặc biệt", duration: 4200 },
+
+  { text: "Chúc người đẹp\nluôn mỉm cười", duration: 4000 },
+
+  { text: "Mọi muộn phiền\nrồi sẽ qua", duration: 3500 },
+
+  { text: "Và những điều\ntốt đẹp sẽ đến", duration: 3900 },
+
+  { text: "Nếu một ngày\nthấy mệt mỏi", duration: 3500 },
+
+  { text: "Hãy nhớ rằng\nvẫn có BB", duration: 4100 },
+
+  { text: "Sẵn sàng lắng nghe\nvà sẻ chia", duration: 3700 },
+
+  { text: "Chẳng cần hứa\nnhững điều lớn lao", duration: 4400 },
+
+  { text: "Chỉ mong chúng ta\nluôn chân thành như thế ♡", duration: 4400 },
+
+  {
+    type: "final",
+    text: "Bình yên nhé, người đẹp của tui nè♡",
+    caption: "20.10.2026 · Cảm ơn vì đã là một người đặc biệt",
+    replay: "↻ Xem lại"
+  }
+];
+
+const introStep = STEPS[0];
+const finalStep = STEPS[STEPS.length - 1];
 const SETTINGS = {
-  messages: [
-    { text: "Hôm nay 20.10", duration: 3500 },
-    { text: "Là ngày\ncủa em", duration: 3500 },
-    { text: "Chúc em luôn\nhạnh phúc", duration: 4200 },
-    { text: "Những điều tốt\nđẹp nhất", duration: 4000 },
-    { text: "Sẽ đến\nvới em", duration: 3500 },
-    { text: "Luôn có\nngười", duration: 3500 },
-    { text: "Thương em\nthật lòng", duration: 3900 },
-    { text: "Mà người\nđó", duration: 3500 },
-    { text: "Là anh\nđược không?", duration: 4100 },
-    { text: "Em đồng ý\nnhé?", duration: 3700 },
-    { text: "Làm người yêu\nanh nhé ♡", duration: 4400 }
-  ],
-  finalText: "Anh yêu em", // Dòng chữ giữa trái tim
-  finalCaption: "20.10.2026 · Luôn mỉm cười nhé ♡",
+  messages: STEPS.slice(1, -1),
+  finalText: finalStep.text,
+  finalCaption: finalStep.caption,
   rainColor: [255, 54, 132], // RGB của mưa chữ
   maxTextParticles: 2700,
   heartParticles: 1250
@@ -130,19 +168,29 @@ const announce = document.getElementById('announce');
 const music = document.getElementById('music');
 const startBtn = document.getElementById('startBtn');
 const replayBtn = document.getElementById('replayBtn');
-const soundBtn = document.getElementById('soundBtn');
+const experience = document.getElementById('experience');
+document.querySelector('.top-label').textContent = introStep.label;
+document.querySelector('.eyebrow').textContent = introStep.eyebrow;
+const title = document.querySelector('h1');
+title.textContent = introStep.title;
+title.style.whiteSpace = 'pre-line';
+document.querySelector('.intro-desc').textContent = introStep.description;
+document.querySelector('.rotate-hint').textContent = introStep.hint;
+startBtn.textContent = introStep.button;
+replayBtn.textContent = finalStep.replay;
+caption.textContent = finalStep.caption;
 
 let W = 0, H = 0, dpr = 1, columnGap = 18, columns = [];
 let playing = false, finished = false, sceneIndex = -1;
 let sceneStartedAt = 0, pausedMs = 0, prevFrame = 0, particles = [];
 let textImage = null, heartScale = 1, startTime = 0;
-let audioOn = true, lastRainStep = 0;
+let lastRainStep = 0;
 const alphabet = '01·:;*+♡♥LOVExYzアイウエオ';
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 function resize() {
-  W = window.innerWidth; H = window.innerHeight;
+  W = experience.clientWidth; H = experience.clientHeight;
   dpr = Math.min(window.devicePixelRatio || 1, 1.75);
   for (const c of [rainCanvas, fxCanvas]) {
     c.width = Math.round(W * dpr);
@@ -203,8 +251,8 @@ function sampleText(text) {
     if (Math.max(...lines.map(s => c.measureText(s).width)) <= W*.84 || fs<=22) break;
     fs -= 1;
   }
-  c.fillStyle = '#ffd9ea';
-  c.shadowColor = '#ff61b0'; c.shadowBlur = 5;
+  c.fillStyle = '#fff4fa';
+  c.shadowBlur = 0;
   const lineHeight = fs * 1.27;
   const top = H / 2 - (lines.length - 1) * lineHeight/2;
   lines.forEach((line,i) => c.fillText(line, W/2, top+i*lineHeight));
@@ -287,7 +335,7 @@ function drawScene(t) {
   let envelope = heart ? clamp(elapsed/1700,0,1) :
     Math.min(clamp(elapsed/1050,0,1), clamp((duration-elapsed)/800,0,1));
   const ease = heart ? .031 : .045;
-  const drift = heart ? 1.7 : .65;
+  const drift = heart ? 1.7 : .25;
 
   if (heart) {
     // Thin, luminous outline underneath the individual particles.
@@ -305,8 +353,8 @@ function drawScene(t) {
     fx.shadowColor='#ff4dab'; fx.shadowBlur=20;
     fx.lineWidth=2.7; fx.stroke(); fx.restore();
   } else if (textImage) {
-    fx.save(); fx.globalAlpha = .22*envelope;
-    fx.shadowColor = '#ff95cb'; fx.shadowBlur = 14;
+    fx.save(); fx.globalAlpha = .92*envelope;
+    fx.shadowColor = '#ff95cb'; fx.shadowBlur = 2;
     fx.drawImage(textImage,0,0,W,H);
     fx.restore();
   }
@@ -333,7 +381,7 @@ function drawScene(t) {
       fx.save(); fx.textAlign='center'; fx.textBaseline='middle';
       fx.font=`700 ${fs}px system-ui, "Segoe UI", sans-serif`;
       fx.fillStyle=`rgba(255,225,239,${alpha})`;
-      fx.shadowColor='#ff5fb1'; fx.shadowBlur=23;
+      fx.shadowColor='#ff5fb1'; fx.shadowBlur=6;
       fx.fillText(SETTINGS.finalText,W/2,H/2+H*.015);
       fx.restore();
     }
@@ -365,23 +413,36 @@ function start() {
   intro.classList.add('hide');
   startTime=performance.now();
   setScene(0,startTime);
-  if(audioOn) music.play().catch(()=>{}); // iOS yêu cầu thao tác nhấn nút trước khi phát nhạc.
-  // Trên thiết bị hỗ trợ, mở fullscreen khi người dùng bắt đầu.
-  if(document.documentElement.requestFullscreen && window.matchMedia('(orientation: landscape)').matches) {
-    document.documentElement.requestFullscreen().catch(()=>{});
-  }
+  enablePresentation();
+}
+
+function playMusic() {
+  music.play().catch(() => {});
+}
+async function enablePresentation() {
+  playMusic();
+  const root = document.documentElement;
+  try {
+    if (!document.fullscreenElement) {
+      if (root.requestFullscreen) await root.requestFullscreen();
+      else if (root.webkitRequestFullscreen) root.webkitRequestFullscreen();
+    }
+  } catch (_) { /* Thử lại sau thao tác chạm nếu trình duyệt chặn. */ }
+  try {
+    if (window.matchMedia('(pointer: coarse)').matches && screen.orientation?.lock) {
+      await screen.orientation.lock('landscape');
+    }
+  } catch (_) { /* Bố cục CSS vẫn hiển thị ngang khi không hỗ trợ khóa xoay. */ }
 }
 startBtn.addEventListener('click',start);
 replayBtn.addEventListener('click',()=>{
   music.currentTime=0;
   start();
 });
-soundBtn.addEventListener('click',()=>{
-  audioOn=!audioOn;
-  soundBtn.textContent=audioOn?'♫ Tắt nhạc':'♫ Bật nhạc';
-  if(audioOn && playing) music.play().catch(()=>{});
-  else music.pause();
-});
+// Tự phát nếu được phép; lần chạm đầu tiên mở khóa nhạc và fullscreen.
+document.addEventListener('pointerdown', enablePresentation, {once:true});
+document.addEventListener('keydown', enablePresentation, {once:true});
+enablePresentation();
 
 resize();
 requestAnimationFrame(loop);
