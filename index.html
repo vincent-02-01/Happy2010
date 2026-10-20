@@ -349,8 +349,8 @@ const SETTINGS = {
   finalText: finalStep.text,
   finalCaption: finalStep.caption,
   rainColor: [255, 54, 132], // RGB của mưa chữ
-  maxTextParticles: 3600,
-  fireflies: { gatherMs: 1900, scatterMs: 1700, pauseMs: 850, radius: .85, glow: 7 },
+  maxTextParticles: 9000,
+  fireflies: { gatherMs: 1900, scatterMs: 1700, pauseMs: 850, radius: 1, glow: 5 },
   heartParticles: 1250
 };
 // ============================================================
@@ -456,16 +456,19 @@ function sampleText(text) {
   lines.forEach((line,i) => c.fillText(line, W/2, top+i*lineHeight));
   c.shadowBlur = 0;
   const pixels = c.getImageData(0,0,buf.width,buf.height).data;
-  const step = W*H>850000 ? 3 : 2.5;
+  // Small glyphs need tighter sampling so accents and thin strokes survive.
+  const step = clamp(fs / 24, 1.35, 2);
+  const budget = Math.min(SETTINGS.maxTextParticles, W * H < 500000 ? 6500 : 9000);
   const targets=[];
   for (let y=2;y<H;y+=step) for(let x=2;x<W;x+=step) {
     const alpha = pixels[(Math.floor(y)*buf.width+Math.floor(x))*4+3];
-    if(alpha>105 && Math.random()>.08) targets.push({x,y});
+    if(alpha>100) targets.push({x,y});
   }
-  // Sampling with a cap protects less powerful mobile devices.
-  for(let i=targets.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [targets[i],targets[j]]=[targets[j],targets[i]]; }
-  targets.length = Math.min(SETTINGS.maxTextParticles, targets.length);
-  return {buf, targets};
+  // Evenly retain points across every line rather than randomly thinning the text.
+  const count = Math.min(budget, targets.length);
+  const evenlySpaced = Array.from({length: count}, (_, i) =>
+    targets[Math.floor((i + .5) * targets.length / count)]);
+  return {targets: evenlySpaced};
 }
 
 function heartXY(t) {
@@ -509,7 +512,8 @@ function setScene(index, t, preserve=false) {
     return {
       x, y, sx: x, sy: y, tx: target.x, ty: target.y,
       dx: Math.cos(angle) * distance, dy: Math.sin(angle) * distance,
-      size: rand(.45, 1.05) * SETTINGS.fireflies.radius,
+      size: rand(.58, .95) * SETTINGS.fireflies.radius,
+      sparkle: Math.random() < .075,
       phase: rand(0, Math.PI * 2), speed: rand(.0016, .004),
       delay: rand(0, .18), bend: rand(-60, 60)
     };
@@ -577,15 +581,26 @@ function drawScene(t) {
     // Independent slow pulses and brief bright flashes, with a crisp pin-point core.
     const pulse = (.5 + .5 * Math.sin(t * p.speed + p.phase)) ** 3;
     const flash = (.5 + .5 * Math.sin(t * p.speed * 2.3 + p.phase)) ** 18;
-    const brightness = .28 + .55 * pulse + .35 * flash;
+    const brightness = .62 + .28 * pulse + .55 * flash;
     const halo = SETTINGS.fireflies.glow * p.size * (1 + flash * .65);
-    fx.globalAlpha = Math.min(1, brightness * .72) * envelope;
+    fx.globalAlpha = Math.min(1, (.16 + .32 * pulse + .85 * flash)) * envelope;
     fx.drawImage(fireflySprite, p.x - halo, p.y - halo, halo * 2, halo * 2);
-    fx.globalAlpha = Math.min(1, brightness + .25) * envelope;
+    fx.globalAlpha = Math.min(1, brightness) * envelope;
     fx.fillStyle = '#fff1fa';
     fx.beginPath();
-    fx.arc(p.x, p.y, p.size * (.8 + flash * .35), 0, Math.PI * 2);
+    fx.arc(p.x, p.y, p.size * (.95 + flash * .45), 0, Math.PI * 2);
     fx.fill();
+    if (p.sparkle && flash > .55) {
+      // Brief, sparse glints stand out above the steady, readable pin-point cores.
+      const ray = 1.5 + flash * 2;
+      fx.globalAlpha = (flash - .55) / .45 * envelope;
+      fx.lineWidth = .65;
+      fx.strokeStyle = '#fff9fd';
+      fx.beginPath();
+      fx.moveTo(p.x - ray, p.y); fx.lineTo(p.x + ray, p.y);
+      fx.moveTo(p.x, p.y - ray); fx.lineTo(p.x, p.y + ray);
+      fx.stroke();
+    }
   }
   fx.restore();
 
