@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#08030c" />
-  <meta name="description" content="Món quà đặc biệt nhân ngày Phụ nữ Việt Nam 20/10" />
+  <meta name="description" content="Món quà đặc biệt cho người đặc biệt" />
   <title>20.10 | Gửi đến người đẹp của tui ♥</title>
   <style>
     :root { --pink: #ff5caa; --pink-light: #ffe4f2; --bg: #08030c; }
@@ -140,7 +140,7 @@ const STEPS = [
 
   {
     type: "final",
-    text: "Bình yên nhé, người đẹp của tui nè♡",
+    text: "Bình yên và thật hạnh phúc nhé\n người đẹp của tui nè♡",
     caption: "20.10.2026 · Cảm ơn vì đã là một người đặc biệt",
     replay: "↻ Xem lại"
   }
@@ -153,7 +153,8 @@ const SETTINGS = {
   finalText: finalStep.text,
   finalCaption: finalStep.caption,
   rainColor: [255, 54, 132], // RGB của mưa chữ
-  maxTextParticles: 2700,
+  maxTextParticles: 3600,
+  fireflies: { gatherMs: 1150, scatterMs: 900, radius: .85, glow: 7 },
   heartParticles: 1250
 };
 // ============================================================
@@ -183,7 +184,7 @@ caption.textContent = finalStep.caption;
 let W = 0, H = 0, dpr = 1, columnGap = 18, columns = [];
 let playing = false, finished = false, sceneIndex = -1;
 let sceneStartedAt = 0, pausedMs = 0, prevFrame = 0, particles = [];
-let textImage = null, heartScale = 1, startTime = 0;
+let heartScale = 1, startTime = 0;
 let lastRainStep = 0;
 const alphabet = '01·:;*+♡♥LOVExYzアイウエオ';
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -258,7 +259,7 @@ function sampleText(text) {
   lines.forEach((line,i) => c.fillText(line, W/2, top+i*lineHeight));
   c.shadowBlur = 0;
   const pixels = c.getImageData(0,0,buf.width,buf.height).data;
-  const step = W*H>850000 ? 5 : (W*H>320000? 4:3);
+  const step = W*H>850000 ? 3 : 2.5;
   const targets=[];
   for (let y=2;y<H;y+=step) for(let x=2;x<W;x+=step) {
     const alpha = pixels[(Math.floor(y)*buf.width+Math.floor(x))*4+3];
@@ -288,43 +289,49 @@ function heartTargets() {
 
 function setScene(index, t, preserve=false) {
   sceneIndex = index;
-  sceneStartedAt = t;
+  if (!preserve) sceneStartedAt = t;
   const isHeart = index >= SETTINGS.messages.length;
   let positions;
   if (isHeart) {
     positions = heartTargets();
-    textImage = null;
     caption.textContent = SETTINGS.finalCaption;
     announce.textContent = SETTINGS.finalText;
   } else {
     const message = SETTINGS.messages[index].text;
     const sampled=sampleText(message);
     positions=sampled.targets;
-    textImage=sampled.buf;
     announce.textContent=message.replaceAll('\n',' ');
     caption.classList.remove('visible');
   }
-  if (!preserve) {
-    const old = particles;
-    particles=positions.map((target,i) => {
-      let src = old.length ? old[Math.floor(Math.random()*old.length)] : null;
-      let x = src ? src.x : rand(0,W);
-      let y = src ? src.y : rand(0,H);
-      if (index===0) { x=rand(0,W); y=rand(0,H); }
-      return {
-        x,y, vx:rand(-1,1),vy:rand(-1,1),
-        tx:target.x, ty:target.y,
-        size:rand(.8,1.9), phase:rand(0,7),
-        spread:rand(.6,2.2)
-      };
-    });
-  } else {
-    particles=positions.map((target,i)=>({
-      x:target.x,y:target.y,tx:target.x,ty:target.y,
-      vx:0,vy:0,size:rand(.8,1.9),phase:rand(0,7),spread:1
-    }));
-  }
+  const old = particles;
+  particles = positions.map((target, i) => {
+    const src = !preserve && index > 0 ? old[i % old.length] : null;
+    const x = preserve ? target.x : (src ? src.x : rand(0, W));
+    const y = preserve ? target.y : (src ? src.y : rand(0, H));
+    const angle = rand(0, Math.PI * 2);
+    const distance = rand(Math.min(W, H) * .25, Math.min(W, H) * .85);
+    return {
+      x, y, sx: x, sy: y, tx: target.x, ty: target.y,
+      dx: Math.cos(angle) * distance, dy: Math.sin(angle) * distance,
+      size: rand(.45, 1.05) * SETTINGS.fireflies.radius,
+      phase: rand(0, Math.PI * 2), speed: rand(.0016, .004),
+      delay: rand(0, .18), bend: rand(-60, 60)
+    };
+  });
 }
+
+const smooth = v => { v = clamp(v, 0, 1); return v * v * (3 - 2 * v); };
+// A cached halo avoids expensive shadowBlur work for thousands of tiny lights.
+const fireflySprite = document.createElement('canvas');
+fireflySprite.width = fireflySprite.height = 32;
+const glowContext = fireflySprite.getContext('2d');
+const glowGradient = glowContext.createRadialGradient(16,16,0,16,16,16);
+glowGradient.addColorStop(0, 'rgba(255,245,252,1)');
+glowGradient.addColorStop(.12, 'rgba(255,218,239,.95)');
+glowGradient.addColorStop(.32, 'rgba(255,130,195,.35)');
+glowGradient.addColorStop(1, 'rgba(255,80,170,0)');
+glowContext.fillStyle = glowGradient;
+glowContext.fillRect(0,0,32,32);
 
 function drawScene(t) {
   fx.clearRect(0,0,W,H);
@@ -332,10 +339,11 @@ function drawScene(t) {
   const heart = sceneIndex >= SETTINGS.messages.length;
   const elapsed = Math.max(0,t-sceneStartedAt);
   const duration=heart ? Infinity : SETTINGS.messages[sceneIndex].duration;
-  let envelope = heart ? clamp(elapsed/1700,0,1) :
-    Math.min(clamp(elapsed/1050,0,1), clamp((duration-elapsed)/800,0,1));
-  const ease = heart ? .031 : .045;
-  const drift = heart ? 1.7 : .25;
+  const envelope = heart ? clamp(elapsed/1700,0,1) : 1;
+  const gatherMs = Math.min(SETTINGS.fireflies.gatherMs, duration * .34);
+  const scatterMs = Math.min(SETTINGS.fireflies.scatterMs, duration * .27);
+  const gather = heart ? smooth(elapsed / 1700) : clamp(elapsed / gatherMs, 0, 1);
+  const scatter = heart ? 0 : clamp((elapsed - duration + scatterMs) / scatterMs, 0, 1);
 
   if (heart) {
     // Thin, luminous outline underneath the individual particles.
@@ -352,37 +360,52 @@ function drawScene(t) {
     fx.strokeStyle=`rgba(255,63,152,${.34*envelope})`;
     fx.shadowColor='#ff4dab'; fx.shadowBlur=20;
     fx.lineWidth=2.7; fx.stroke(); fx.restore();
-  } else if (textImage) {
-    fx.save(); fx.globalAlpha = .92*envelope;
-    fx.shadowColor = '#ff95cb'; fx.shadowBlur = 2;
-    fx.drawImage(textImage,0,0,W,H);
-    fx.restore();
   }
 
-  fx.save(); fx.shadowColor='#ff74b5'; fx.shadowBlur=4;
+  fx.save();
+  fx.globalCompositeOperation = 'lighter';
   for (const p of particles) {
-    let wiggle=Math.sin(t/390+p.phase)*drift;
-    const tx=p.tx+wiggle, ty=p.ty+Math.cos(t/530+p.phase)*drift;
-    // Spring interpolation makes scattered points gather into each new phrase.
-    p.vx=(p.vx+(tx-p.x)*ease)*.69;
-    p.vy=(p.vy+(ty-p.y)*ease)*.69;
-    p.x+=p.vx; p.y+=p.vy;
-    const twinkle= .55+ .45*Math.sin(t/460 + p.phase)**2;
-    fx.fillStyle=`rgba(255,${heart?105:196},${heart?183:226},${envelope*(.44+.56*twinkle)})`;
-    const size=p.size*(heart?1.3:1.0);
-    fx.fillRect(p.x-size/2,p.y-size/2,size,size);
+    const arrival = smooth((gather - p.delay) / (1 - p.delay));
+    const departure = smooth((scatter - p.delay * .6) / (1 - p.delay * .6));
+    const flutter = Math.sin(arrival * Math.PI) * p.bend;
+    const drift = heart ? 1.2 : .32 + departure * 7;
+    p.x = p.sx + (p.tx - p.sx) * arrival + p.dx * departure
+      + Math.sin(p.phase + arrival * Math.PI * 2) * flutter
+      + Math.sin(t * .0015 + p.phase) * drift;
+    p.y = p.sy + (p.ty - p.sy) * arrival + p.dy * departure
+      + Math.cos(p.phase + arrival * Math.PI * 2) * flutter
+      + Math.cos(t * .0012 + p.phase) * drift;
+    // Independent slow pulses and brief bright flashes, with a crisp pin-point core.
+    const pulse = (.5 + .5 * Math.sin(t * p.speed + p.phase)) ** 3;
+    const flash = (.5 + .5 * Math.sin(t * p.speed * 2.3 + p.phase)) ** 18;
+    const brightness = (.28 + .55 * pulse + .35 * flash) * envelope;
+    const halo = SETTINGS.fireflies.glow * p.size * (1 + flash * .65);
+    fx.globalAlpha = brightness * .72;
+    fx.drawImage(fireflySprite, p.x - halo, p.y - halo, halo * 2, halo * 2);
+    fx.globalAlpha = Math.min(1, brightness + .25);
+    fx.fillStyle = '#fff1fa';
+    fx.beginPath();
+    fx.arc(p.x, p.y, p.size * (.8 + flash * .35), 0, Math.PI * 2);
+    fx.fill();
   }
   fx.restore();
 
   if(heart) {
     const alpha=clamp((elapsed-1000)/1600,0,1);
     if(alpha>0){
-      const fs=clamp(Math.min(W*.047,H*.070),17,38);
+      let fs=clamp(Math.min(W*.047,H*.070),14,38);
+      const lines = wrapText(SETTINGS.finalText);
       fx.save(); fx.textAlign='center'; fx.textBaseline='middle';
-      fx.font=`700 ${fs}px system-ui, "Segoe UI", sans-serif`;
+      const maxWidth = heartScale * 24;
+      do {
+        fx.font=`700 ${fs}px system-ui, "Segoe UI", sans-serif`;
+        if (Math.max(...lines.map(line => fx.measureText(line).width)) <= maxWidth) break;
+        fs -= 1;
+      } while (fs > 10);
       fx.fillStyle=`rgba(255,225,239,${alpha})`;
       fx.shadowColor='#ff5fb1'; fx.shadowBlur=6;
-      fx.fillText(SETTINGS.finalText,W/2,H/2+H*.015);
+      lines.forEach((line, i) => fx.fillText(line, W/2,
+        H/2 + H*.015 + (i - (lines.length-1)/2) * fs * 1.4));
       fx.restore();
     }
     if(elapsed > 2500) {
